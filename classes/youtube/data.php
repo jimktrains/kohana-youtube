@@ -10,14 +10,14 @@
  * @license    http://creativecommons.org/licenses/BSD/
  */
 abstract class YouTube_Data {
-    
+
     // Object info
     protected $_cache_key;
     protected $_url;
-    
+
     // pagination info
     protected $_pagination = array();
-    
+
     /**
      * What kind of data will be returned,
      * either YouTube::USER_PLAYLISTS, or YouTube::PLAYLIST_VIDEOS
@@ -25,15 +25,15 @@ abstract class YouTube_Data {
      * @var string data type to return
      */
     protected $_result_type = '';
-    
+
     public function __construct($name)
     {
         // set the cache key based on passed name
         $this->_cache_key = $name;
-        
+
         // Initialize data
         $data = $this->_initialize();
-        
+
         // set meta properties
         $this->_pagination = array(
                 'total_items'    => $data->totalItems,
@@ -42,12 +42,12 @@ abstract class YouTube_Data {
                 'limit'          => $data->totalItems
             );
     }
-    
+
     /**
      * Initialize the data for the class
      * Makes an API call if needed
      *
-     * @return mixed 
+     * @return mixed
      */
     protected function _initialize()
     {
@@ -56,7 +56,7 @@ abstract class YouTube_Data {
          {
              throw new Exception('No result type set.');
          }
- 
+
          // check to see if data is cached first
         $data = Kohana::cache($this->_cache_key);
 
@@ -65,15 +65,15 @@ abstract class YouTube_Data {
         {
             try {
                 // Remote call the feed url
-                $feed = Remote::get($this->_url);
+                $feed = Request::factory($this->_url)->execute();
             } catch (Exception $e) {
                 // Do nothing for now
                 // @todo some error checking
                 return FALSE;
             }
-            
+
             $json = json_decode($feed);
-            
+
             if ($json !== NULL)
             {
                 $data = $json->data;
@@ -86,10 +86,12 @@ abstract class YouTube_Data {
 
         // cache the data
         Kohana::cache($this->_cache_key, $data, 300);
-        
+
+	    $this->data = $data;
+
         return $data;
     }
-    
+
     /**
      * Handles retrieval of metadata.
      *
@@ -107,31 +109,31 @@ abstract class YouTube_Data {
             return $this->_pagination[$name];
         }
     }
-    
+
     public function __sleep()
     {
         return array('_pagination', '_url', '_cache_key', '_result_type');
     }
-    
+
     public function __wakeup()
     {
         $this->_initialize();
     }
-    
+
     public function offset($num)
     {
         $this->_pagination['offset'] = $num;
-        
+
         return $this;
     }
-    
+
     public function limit($count)
-    {        
+    {
         $this->_pagination['limit'] = $count;
-        
+
         return $this;
     }
-    
+
     /**
      * Find all related items
      *
@@ -140,43 +142,43 @@ abstract class YouTube_Data {
     public function find_all()
     {
         $result_type = $this->_result_type;
-        
+
         $data = $this->_initialize();
-        
+
         // paginate items
         $items = array_slice(
                 $data->items,
                 $this->_pagination['offset'],
                 $this->_pagination['limit']
             );
-        
+
         return new $result_type($items);
     }
-    
+
     /**
      * Find a specific item
      *
-     * @param string $id 
+     * @param string $id
      * @return YouTube_Item (depends on result type of this class)
      */
     public function find($id)
     {
         $search_ids = array();
-        
+
         $data = $this->_initialize();
-        
+
         foreach ($data->items as $item)
         {
             $search_ids[] = ($this->_result_type === YouTube::VIDEO_RESULT) ?
                 $item->video->id : $item->id;
         }
-        
+
         $index = (is_int($id)) ? $id : array_search($id, $search_ids);
-        
+
         $result_type = $this->_result_type;
-        
+
         $results = new $result_type($data->items);
-        
+
         return ($index !== FALSE) ? $results[$index] : $index;
     }
 }
