@@ -145,6 +145,11 @@ abstract class YouTube_Data {
 
         $data = $this->_initialize();
 
+	    if( ! $data->items)
+	    {
+		    return NULL;
+	    }
+
         // paginate items
         $items = array_slice(
                 $data->items,
