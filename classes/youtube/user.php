@@ -6,9 +6,9 @@ class YouTube_User {
     
     protected $_playlists;
     
-    public function __construct()
+    public function __construct($name)
     {
-        $this->_playlists = new YouTube_Playlist($this->_user);
+        $this->_playlists = new YouTube_Playlist($this->_user = $name);
     }
     
     public function playlists()
